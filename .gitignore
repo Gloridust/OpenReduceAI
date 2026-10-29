@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# OpenReduceAI
+/data/
+/models/
+/outputs/
+/.venv-vllm/
+logs_*.txt

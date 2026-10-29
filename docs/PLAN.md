@@ -1,4 +1,12 @@
-# OpenReduceAI 技术方案（v0.1，2026-10-29）
+# OpenReduceAI 技术方案（v0.2，2026-10-29）
+
+> **v0.2 实施中的调整**（实测结果见 [RESULTS.md](RESULTS.md)）：
+> - AI 化数据改由 **Claude 子 agent 逐条手写**（Sonnet / Haiku / Fable 生成训练集，Opus 单独生成评测集），不调外部 API。
+>   共 43 批、4240 段，过滤后训练 3737 对、评测 240 对。
+> - Qwen3.5 的 checkpoint 自带视觉塔，用 `orai/train/text_only.py` 转成纯文本 CausalLM 再训练。
+> - 4B 的 bf16 LoRA 在本机放不下（常驻程序占约 2.7 GB），训练时基座用 **8-bit** 加载（误差远小于官方不建议的 4-bit）。
+> - 新增第三方检测器 `yuchuantian/AIGC_detector_zhv3` 作为 **D4 外部检测**，只用于评测。
+> - 硬信息保留按「原文里有的才算」判断；作弊字符检查也只看改写后新出现的。
 
 > 目标：在本机（RTX 3060 12 GB）微调一个约 4B 的小模型，把中文文稿里的「AI 腔」改掉，
 > 显著降低 AIGC 检测率。优先级：**检测率下降 > 意思不变 > 读着顺**。可以口语化一些，
