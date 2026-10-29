@@ -225,3 +225,5 @@ __marimo__/
 /outputs/
 /.venv-vllm/
 logs_*.txt
+/logs/
+/unsloth_compiled_cache/

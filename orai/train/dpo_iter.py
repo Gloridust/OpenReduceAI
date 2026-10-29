@@ -35,14 +35,15 @@ def cmd_sample(args):
     rows = [json.loads(l) for l in open(args.data, encoding="utf-8")]
     random.Random(args.seed).shuffle(rows)
     rows = rows[:args.limit]
-    rw = Rewriter(args.model)
+    rw = Rewriter(args.model, quant=args.quant)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         for style in ("书面", "口语"):
             sub = [r for r in rows if STYLE_BY_DOMAIN[r["domain"]] == style]
             for k in range(0, len(sub), 32):
                 part = sub[k:k + 32]
-                cands = rw.generate([r["ai"] for r in part], style=style, n=args.k, temperature=args.temperature)
+                cands = rw.generate([r["ai"] for r in part], style=style, n=args.k, temperature=args.temperature,
+                                    batch_size=args.batch_size)
                 for r, c in zip(part, cands):
                     f.write(json.dumps({"id": r["id"], "style": style, "ai": r["ai"], "human": r["human"],
                                         "cands": c}, ensure_ascii=False) + "\n")
@@ -87,8 +88,10 @@ def cmd_train(args):
     from datasets import Dataset
     from trl import DPOConfig, DPOTrainer
 
+    # 12 GB 显存放不下 bf16 的 4B 训练，和 SFT 一样用 8-bit 基座；参考模型是关掉 LoRA 的同一个基座
     model, tok = FastLanguageModel.from_pretrained(model_name=args.model, max_seq_length=1536,
-                                                   load_in_4bit=False, load_in_16bit=True)
+                                                   load_in_8bit=args.quant == "8bit", load_in_4bit=args.quant == "4bit",
+                                                   load_in_16bit=args.quant == "16bit")
     model = FastLanguageModel.get_peft_model(
         model, r=args.rank, lora_alpha=args.rank, lora_dropout=0, bias="none",
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj",
@@ -116,9 +119,10 @@ if __name__ == "__main__":
     m = sp.add_parser("merge"); m.add_argument("--adapter", required=True); m.add_argument("--out", required=True)
     s = sp.add_parser("sample")
     s.add_argument("--model", required=True); s.add_argument("--out", required=True)
-    s.add_argument("--data", default="data/pairs/train.jsonl"); s.add_argument("--k", type=int, default=6)
+    s.add_argument("--data", default="data/pairs/train_sel.jsonl"); s.add_argument("--k", type=int, default=6)
     s.add_argument("--limit", type=int, default=1200); s.add_argument("--temperature", type=float, default=1.0)
     s.add_argument("--seed", type=int, default=1)
+    s.add_argument("--quant", default="16bit"); s.add_argument("--batch-size", type=int, default=2)
     c = sp.add_parser("score")
     c.add_argument("--cands", required=True); c.add_argument("--out", required=True)
     c.add_argument("--margin", type=float, default=0.05); c.add_argument("--human-ratio", type=float, default=0.3)
@@ -126,5 +130,6 @@ if __name__ == "__main__":
     t.add_argument("--model", required=True); t.add_argument("--pairs", required=True); t.add_argument("--out", required=True)
     t.add_argument("--beta", type=float, default=0.1); t.add_argument("--lr", type=float, default=5e-6)
     t.add_argument("--rank", type=int, default=32)
+    t.add_argument("--quant", default="8bit", choices=["8bit", "4bit", "16bit"])
     a = ap.parse_args()
     {"merge": cmd_merge, "sample": cmd_sample, "score": cmd_score, "train": cmd_train}[a.cmd](a)

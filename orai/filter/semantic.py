@@ -18,9 +18,10 @@ def hard_facts(text: str) -> set[str]:
     return nums | latin | quotes
 
 
-def fact_recall(src: str, out: str) -> float:
-    """源文的硬信息在输出里保留的比例（没有硬信息时记 1）。"""
-    f = hard_facts(src)
+def fact_recall(src: str, out: str, numbers_only: bool = False) -> float:
+    """源文的硬信息在输出里保留的比例（没有硬信息时记 1）。
+    numbers_only：口语语料里的英文多是网络用语（orz、qaq），只核对两位以上的数字。"""
+    f = {n for n in re.findall(r"\d{2,}(?:[.．]\d+)?%?", src)} if numbers_only else hard_facts(src)
     if not f:
         return 1.0
     out_l = out.lower()

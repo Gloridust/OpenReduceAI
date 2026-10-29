@@ -6,10 +6,13 @@ python -m orai.filter.build_pairs [--no-filter]
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
+import re
 from pathlib import Path
 
 from orai.detect.stats import cheat_flags
+from orai.filter.semantic import fact_recall
 
 # 批次号 → 生成它的模型（见 orai/aiify/README.md）
 def gen_model(batch_name: str) -> str:
@@ -77,14 +80,19 @@ def main():
     for r, mt in zip(rows, metrics):
         r["meta"] = mt
         reason = None
-        if cheat_flags(r["ai"], r["human"]):
+        if re.search(r"<[a-zA-Z/]|data-raw|&[a-z]+;|src=", r["human"]):
+            reason = "html_residue"  # 抓取残留的 HTML 片段
+        elif cheat_flags(r["ai"], r["human"]):
             reason = "cheat_flags"
         elif mt["sim"] < args.min_sim:
             reason = "low_sim"
-        elif mt["fact_recall"] < args.min_fact:
+        elif (fact_recall(r["human"], r["ai"], numbers_only=True) if r["source"].startswith("clue")
+              else mt["fact_recall"]) < args.min_fact:
             reason = "fact_lost"
         elif not 0.6 <= mt["len_ratio"] <= 1.6:
             reason = "length"
+        elif difflib.SequenceMatcher(None, r["human"], r["ai"], autojunk=False).ratio() > 0.95:
+            reason = "too_similar"  # AI 版本几乎没改，学到的只是照抄
         if reason and not args.no_filter and r["split"] == "train":
             drop[reason] = drop.get(reason, 0) + 1
             continue
