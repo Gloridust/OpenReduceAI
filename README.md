@@ -1,6 +1,6 @@
 # OpenReduceAI
 
-在单张 12 GB 显卡上微调的中文「去 AI 腔」改写小模型。基座 Qwen3.5-4B-Base，bf16 LoRA。
+在单张 12 GB 显卡上微调的中文「去 AI 腔」改写小模型。基座 Qwen3.5-4B-Base，8-bit 加载 + LoRA。
 
 核心做法：拿 ChatGPT 之前（2022-11 以前）的真人中文文本当目标，先让大模型把它「AI 润色」一遍，
 再训练小模型把 AI 腔还原成真人写法。之后用本地检测器打分做迭代 DPO。设计细节见 [docs/PLAN.md](docs/PLAN.md)，
@@ -35,17 +35,21 @@ UV_INDEX_URL=https://pypi.org/simple .venv/bin/uv pip install --python .venv/bin
 ## 流程
 
 ```bash
-python orai/collect/build_human.py               # 真人段落池
+python orai/collect/build_human.py               # 真人段落池（CSL、HC3、THUCNews）
+python orai/collect/build_colloquial.py          # 口语段落池（CLUECorpusSmall 知乎、点评）
 python orai/aiify/make_batches.py                # 分批，交给子 agent 生成 data/aiify/out/
 .venv/bin/python -m orai.filter.build_pairs      # 组对 + 过滤
+.venv/bin/python -m orai.filter.human_likeness data/pairs/train.jsonl --field human
+.venv/bin/python -m orai.filter.human_likeness data/human/colloquial.jsonl
+.venv/bin/python -m orai.filter.select_targets   # 按像人程度筛目标，口语加权 → train_sel.jsonl
 .venv/bin/python -m orai.detect.classifier train # 训练检测分类器 D2
-.venv/bin/python -m orai.train.sft --out outputs/sft-v1
-.venv/bin/python -m orai.train.dpo_iter merge  --adapter outputs/sft-v1/final --out models/orai-sft-v1-merged
-.venv/bin/python -m orai.train.dpo_iter sample --model models/orai-sft-v1-merged --out data/dpo/r1.cands.jsonl
+.venv/bin/python -m orai.train.sft --data data/pairs/train_sel.jsonl --out outputs/sft-v2
+.venv/bin/python -m orai.train.dpo_iter merge  --adapter outputs/sft-v2/final --out models/orai-sft-v2-merged
+.venv/bin/python -m orai.train.dpo_iter sample --model models/orai-sft-v2-merged --quant 8bit --out data/dpo/r1.cands.jsonl
 .venv/bin/python -m orai.train.dpo_iter score  --cands data/dpo/r1.cands.jsonl --out data/dpo/r1.pairs.jsonl
-.venv/bin/python -m orai.train.dpo_iter train  --model models/orai-sft-v1-merged --pairs data/dpo/r1.pairs.jsonl --out outputs/dpo-r1
-.venv/bin/python -m orai.eval.run_eval gen --adapter outputs/dpo-r1/final --name dpo-r1
-.venv/bin/python -m orai.eval.run_eval score --names sft-v1 dpo-r1
+.venv/bin/python -m orai.train.dpo_iter train  --model models/orai-sft-v2-merged --pairs data/dpo/r1.pairs.jsonl --out outputs/dpo-r1
+.venv/bin/python -m orai.eval.run_eval gen --adapter outputs/dpo-r1/final --name dpo-r1 --quant 8bit
+.venv/bin/python -m orai.eval.run_eval score --names sft-v2 dpo-r1
 ```
 
 改写文稿：
