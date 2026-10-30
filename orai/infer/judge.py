@@ -42,7 +42,7 @@ class Judge:
     @staticmethod
     def passes(m: dict, min_sim=0.82, min_fact=0.9) -> bool:
         return (m["sim"] >= min_sim and m["fact_recall"] >= min_fact and 0.7 <= m["len_ratio"] <= 1.4
-                and m["nli_fwd"] >= 0.3)
+                and m["nli_fwd"] >= 0.3 and m.get("added", 0) == 0)
 
     def rank(self, src: str, cands: list[str]) -> list[dict]:
         """按「先过语义门槛，再比 AI 分」排序；返回带分数的候选列表，最优在前。"""

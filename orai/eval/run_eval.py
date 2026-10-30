@@ -52,6 +52,7 @@ def summarize(name, dets, sems, th):
     if sems:
         for k in ("sim", "nli_fwd", "nli_bwd", "fact_recall", "len_ratio"):
             s[k] = mean(k, sems)
+        s["added"] = statistics.mean(m["added"] > 0 for m in sems)  # 凭空多出数字的比例
     return s
 
 
@@ -102,7 +103,7 @@ def cmd_score(args):
     report = {"thresholds": th, "threshold_acc": {"fdg": acc_f, "bino": acc_b}, "table": table}
     (OUT / f"report-{'-'.join(args.names) or 'base'}.json").write_text(json.dumps(report, ensure_ascii=False, indent=1))
     cols = ["system", "flag_ext", "flag_bino", "flag_fdg", "flag_cls", "ext", "bino", "fdg", "cls", "lp_std", "phrase",
-            "sim", "nli_fwd", "fact_recall", "len_ratio"]
+            "sim", "nli_fwd", "fact_recall", "added", "len_ratio"]
     print("| " + " | ".join(cols) + " |")
     print("|" + "---|" * len(cols))
     for s in table:
@@ -111,6 +112,7 @@ def cmd_score(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
+    ap.add_argument("--eval", default=EVAL, help="评测集文件，例如换一家模型写 AI 版本的 data/pairs/eval_qwen.jsonl")
     sp = ap.add_subparsers(dest="cmd", required=True)
     g = sp.add_parser("gen")
     g.add_argument("--adapter", required=True)
@@ -124,4 +126,5 @@ if __name__ == "__main__":
     s.add_argument("--names", nargs="*", default=[])
     s.add_argument("--limit", type=int)
     a = ap.parse_args()
+    EVAL = a.eval
     {"gen": cmd_gen, "score": cmd_score}[a.cmd](a)
