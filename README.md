@@ -55,7 +55,7 @@ python orai/aiify/make_batches.py                # 分批，交给子 agent 生�
 改写文稿：
 
 ```bash
-.venv/bin/python -m orai.infer.cli 论文.docx --adapter outputs/dpo-r1/final --style 书面
+.venv/bin/python -m orai.infer.cli 论文.docx --adapter outputs/sft-v2/final --style 书面
 ```
 
 显存紧张时先停掉占显存的常驻服务；训练建议放进限内存的 scope：

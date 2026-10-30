@@ -49,7 +49,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("input")
     ap.add_argument("-o", "--output")
-    ap.add_argument("--adapter", default="outputs/dpo-r1/final")
+    ap.add_argument("--adapter", default="outputs/sft-v2/final")
     ap.add_argument("--style", default="书面", choices=["书面", "口语"])
     ap.add_argument("--n", type=int, default=6)
     ap.add_argument("--rounds", type=int, default=2)
