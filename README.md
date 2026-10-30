@@ -58,6 +58,9 @@ python orai/aiify/make_batches.py                # 分批，交给子 agent 生�
 .venv/bin/python -m orai.infer.cli 论文.docx --adapter outputs/sft-v2/final --style 书面
 ```
 
+改写偶尔会改错细节（数量、日期、人称，抽查约 5%）。在意准确多于 AI 率时加 `--temperature 0.6`：
+意思出偏的比例从约 35% 降到约 11%，代价是第三方检测率从约 18% 升到约 27%（见 `docs/RESULTS.md` 第 6 节）。
+
 显存紧张时先停掉占显存的常驻服务；训练建议放进限内存的 scope：
 `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=0 .venv/bin/python -m orai.train.sft`。
 
