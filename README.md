@@ -32,6 +32,21 @@ UV_INDEX_URL=https://pypi.org/simple .venv/bin/uv pip install --python .venv/bin
 模型放在 `models/`（不入库）：`Qwen3.5-4B-Base`、`Qwen3.5-0.8B-Base`、`Qwen3.5-0.8B`、
 `chinese-roberta-wwm-ext`、`Erlangshen-Roberta-110M-NLI`、`bge-base-zh-v1.5`。
 
+## 直接用训好的模型
+
+[v0.1.0 Release](https://github.com/Gloridust/OpenReduceAI/releases/tag/v0.1.0) 提供两个文件：
+
+- `orai-sft-v2-lora.zip`：SFT v2 的 LoRA 适配器，解压到 `outputs/sft-v2/final`。
+- `orai-cls.zip`：重排用的检测分类器，解压到 `models/orai-cls`。
+
+基座要先转成纯文本版：
+
+```bash
+python -m orai.train.text_only models/Qwen3.5-4B-Base models/Qwen3.5-4B-Base-text
+```
+
+0.8B 基座也按同样的方法转换，重排打分要用到它。两个权重都仅供研究使用，具体许可见 Release 说明。
+
 ## 流程
 
 ```bash
